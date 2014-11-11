@@ -1,0 +1,15 @@
+#!/usr/bin/env zsh
+
+DEFAULT_SERVER=parma
+DEFAULT_ARGS=( bin/tm )
+
+RCFILE=$HOME/.connectrc
+[[ -r $RCFILE ]] && source $RCFILE
+
+SERVER=${1:-$DEFAULT_SERVER}
+[[ $# > 0 ]] && shift 1
+
+ARGS=${@:-$DEFAULT_ARGS}
+
+autossh -M 0 -t $SERVER $ARGS
+
