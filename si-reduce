@@ -29,7 +29,18 @@ reduce() {
         i=$((i + 1))
     done
 
-    echo "${value}${space}${si_prefixes[$i]}${unit}"
+    # The suffix is the SI prefix followed by the user-specified unit.
+    suffix="${si_prefixes[$i]}${unit}"
+
+    # Print the reduced value.
+    echo -n "${value}"
+
+    # If we have a nonempty suffix, we might need to print a space between the
+    # value and the unit.
+    [[ -n "$suffix" ]] && echo -n "${space}"
+
+    # Finally print the suffix and a newline.
+    echo "${suffix}"
 }
 
 error() {
