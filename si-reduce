@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
 
 zmodload zsh/mathfunc
 
@@ -9,6 +9,7 @@ quiet=
 space=
 unit=
 
+# This function does the heavy lifting.
 reduce() {
     local value="$1"
     local i=1
@@ -16,11 +17,11 @@ reduce() {
     # Check if $value is numeric
     if echo "$value" | grep -Pqvx -- '-?\d*(\d\.?|\.?\d)\d*([eE]\d+)?'
     then
-        [ -z "$quiet" ] && echo "Non-numeric value $value" >&2
+        error "Non-numeric value $value"
         return 1
     fi
 
-    value=$(( int(value) ))
+    value=$((int(value)))
 
     while (( abs(value) >= base && i < ${#si_prefixes} ))
     do
@@ -31,17 +32,36 @@ reduce() {
     echo "${value}${space}${si_prefixes[$i]}${unit}"
 }
 
+error() {
+    if [ -z "$quiet" ]
+    then
+        echo "si-reduce: $1"
+    fi
+}
+
+die_with_usage() {
+    if [ -z "$quiet" ]
+    then
+        error "$1"
+        echo
+        print_usage
+    fi >&2
+    exit 1
+}
+
 print_usage() {
-    echo 'Usage:'
-    echo '  si-reduce [OPTION]... [NUMBER]...'
-    echo
-    echo 'Where OPTION is one of:'
-    echo '  -b Use binary prefixes'
-    echo '  -d Use decimal prefixes (default)'
-    echo '  -h Print this help message'
-    echo '  -q Supress output other than the result'
-    echo '  -s Insert a space before the prefix'
-    echo '  -u Display a unit after the prefix'
+    cat <<-EOF
+	Usage:
+	  si-reduce [OPTION]... [NUMBER]...
+	
+	Where OPTION is one of:
+	  -b Use binary prefixes
+	  -d Use decimal prefixes (default)
+	  -h Print this help message
+	  -q Supress output other than the result
+	  -s Insert a space before the prefix
+	  -u Display a unit after the prefix
+	EOF
 }
 
 while getopts :bdhqsu: opt
@@ -61,24 +81,15 @@ do
         u)
             unit="$OPTARG" ;;
         \?)
-            if [ -z "$quiet" ]
-            then
-                echo "si-reduce: Unknown flag ${OPTARG}"
-                echo
-                print_usage
-            fi >&2
+            die_with_usage "Unknown flag ${OPTARG}"
             exit 1 ;;
         :)
-            if [ -z "$quiet" ]
-            then
-                echo "si-reduce: Missing argument for flag ${OPTARG}"
-                echo
-                print_usage
-            fi >&2
+            die_with_usage "Missing argument for flag ${OPTARG}"
             exit 1 ;;
     esac
 done
 
+# Now that we've parsed the flags, we can move on to positional arguments
 shift $((OPTIND - 1))
 
 retval=0
