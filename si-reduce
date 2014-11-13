@@ -1,0 +1,97 @@
+#!/bin/zsh
+
+zmodload zsh/mathfunc
+
+si_prefixes=( '' k M G T P E Z Y )
+
+base=1000
+quiet=
+space=
+unit=
+
+reduce() {
+    local value="$1"
+    local i=1
+
+    # Check if $value is numeric
+    if echo "$value" | grep -Pqvx -- '-?\d*(\d\.?|\.?\d)\d*([eE]\d+)?'
+    then
+        [ -z "$quiet" ] && echo "Non-numeric value $value" >&2
+        return 1
+    fi
+
+    value=$(( int(value) ))
+
+    while (( abs(value) >= base && i < ${#si_prefixes} ))
+    do
+        value=$((value / base))
+        i=$((i + 1))
+    done
+
+    echo "${value}${space}${si_prefixes[$i]}${unit}"
+}
+
+print_usage() {
+    echo 'Usage:'
+    echo '  si-reduce [OPTION]... [NUMBER]...'
+    echo
+    echo 'Where OPTION is one of:'
+    echo '  -b Use binary prefixes'
+    echo '  -d Use decimal prefixes (default)'
+    echo '  -h Print this help message'
+    echo '  -q Supress output other than the result'
+    echo '  -s Insert a space before the prefix'
+    echo '  -u Display a unit after the prefix'
+}
+
+while getopts :bdhqsu: opt
+do
+    case "$opt" in
+        b)
+            base=1024 ;;
+        d)
+            base=1000 ;;
+        h)
+            print_usage
+            exit ;;
+        q)
+            quiet=1 ;;
+        s)
+            space=' ' ;;
+        u)
+            unit="$OPTARG" ;;
+        \?)
+            if [ -z "$quiet" ]
+            then
+                echo "si-reduce: Unknown flag ${OPTARG}"
+                echo
+                print_usage
+            fi >&2
+            exit 1 ;;
+        :)
+            if [ -z "$quiet" ]
+            then
+                echo "si-reduce: Missing argument for flag ${OPTARG}"
+                echo
+                print_usage
+            fi >&2
+            exit 1 ;;
+    esac
+done
+
+shift $((OPTIND - 1))
+
+retval=0
+
+if [[ -n "$1" ]]
+then
+    reduce "$1" || retval=1
+else
+    while read line
+    do
+        reduce "$line" || retval=1
+    done
+fi
+
+exit $retval
+
